@@ -56,7 +56,7 @@ class Interactive2DPlotter:
         # Bottone per rimuovere datapoint (Left)
         self.ax_minus_data = plt.axes([0.02, 0.01, 0.05, 0.04])
         self.button_minus_data = Button(self.ax_minus_data, 'Remove', color='lightcoral')
-        # self.button_minus_data.on_clicked(self.remove_datapoint)
+        self.button_minus_data.on_clicked(self.delete_datapoint)
 
         # Etichetta "datapoints" sopra il counter
         self.ax_datapoint_label = plt.axes([0.08, 0.06, 0.06, 0.02])
@@ -73,7 +73,7 @@ class Interactive2DPlotter:
         # Bottone per aggiungere datapoint (Right)
         self.ax_plus_data = plt.axes([0.15, 0.01, 0.05, 0.04])
         self.button_plus_data = Button(self.ax_plus_data, 'Add', color='lightgreen')
-        # self.button_plus_data.on_clicked(self.add_datapoint)
+        self.button_plus_data.on_clicked(self.add_datapoint)
 
         # Inizializza il contatore datapoints
         self.update_datapoint_counter()
@@ -83,11 +83,16 @@ class Interactive2DPlotter:
 
     def generate_datapoints(self, event=None):
         # clear old
+        self.data_generator.delete_datapoints()
         self.clear_datapoints()
         # genera nuovi
         self.data_generator.generate_datapoints()
 
         # Plot data points
+        self.plot_datapoints()
+
+    def plot_datapoints(self):
+        self.clear_datapoints()
         self.datapoints_scatter_plot = self.scatter_plot = self.ax.scatter(
             self.data_generator.x_data, self.data_generator.y_data, 
             color='red', s=120, marker='+', linewidth=4, label='Data points', zorder=10)
@@ -99,7 +104,6 @@ class Interactive2DPlotter:
     def clear_datapoints(self):
         # Rimuovi il plot delle croci se esiste
         if self.datapoints_scatter_plot is not None:
-            self.data_generator.delete_datapoints()
             self.datapoints_scatter_plot.remove()
             self.datapoints_scatter_plot = None
         # Update legend
@@ -131,6 +135,56 @@ class Interactive2DPlotter:
             if legend:
                 legend.remove()
 
+    def add_datapoint(self, event=None):
+        """
+        Aggiunge un nuovo punto dati casuale ai dati esistenti.
+        Se non ci sono dati esistenti, inizializza gli array.
+        """
+        self.data_generator.add_datapoint(None, None)
+        
+        # Rimuovi il plot precedente e crea quello nuovo
+        self.plot_datapoints()
+        self.update_datapoint_counter()
+
+    def delete_datapoint(self, event=None):
+        """
+        Rimuove il primo punto dati dai dati esistenti.
+        Se c'è solo un punto, lo rimuove completamente.
+        """
+        self.data_generator.remove_datapoint()
+        
+        # Rimuovi il plot precedente e crea quello nuovo
+        self.plot_datapoints()
+        self.update_datapoint_counter()
+        
+
+    # def remove_datapoint(self, event=None):
+    #     """
+    #     Rimuove il primo punto dati dai dati esistenti.
+    #     Se c'è solo un punto, lo rimuove completamente.
+    #     """
+    #     # Controlla se ci sono dati da rimuovere
+    #     if not hasattr(self, 'x_data') or self.x_data is None or len(self.x_data) == 0:
+    #         print("Nessun punto da rimuovere")
+    #         return
+        
+    #     if len(self.x_data) == 1:
+    #         # Se c'è solo un punto, rimuovi tutto
+    #         removed_x = self.x_data[0]
+    #         removed_y = self.y_data[0]
+    #         self.x_data = None
+    #         self.y_data = None
+    #         print(f"Ultimo punto rimosso: ({removed_x:.3f}, {removed_y:.3f})")
+    #     else:
+    #         # Rimuovi sempre il primo punto (indice 0)
+    #         removed_x = self.x_data[0]
+    #         removed_y = self.y_data[0]
+            
+    #         self.x_data = self.x_data[1:]  # Rimuovi il primo elemento
+    #         self.y_data = self.y_data[1:]  # Rimuovi il primo elemento
+            
+    #         print(f"Primo punto rimosso: ({removed_x:.3f}, {removed_y:.3f})")
+
         
         
         
@@ -156,7 +210,7 @@ if __name__ == "__main__":
             },
         data_config = {
             "polynomial_degree": 2,
-            "data_size": 100,
+            "data_size": 5,
             "noise_level": 0.01,
             "seed": 42}
     )
