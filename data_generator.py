@@ -59,6 +59,7 @@ class DataGenerator:
         
         elif self.config["polynomial_degree"] == 0:
             self.k = np.random.uniform(self.config["y_range"][0], self.config["y_range"][1], 1)
+            self.y_data_clean = np.ones(len(self.x_data)) * self.k
             self.y_data = self.k + self.noises
             self.y_data = np.clip(self.y_data, self.config["y_range"][0], self.config["y_range"][1])
             print(f"Generated constant function: y = {self.k[0]:.3f}")
@@ -75,7 +76,8 @@ class DataGenerator:
             # Calcola m e q dalla retta passante per (x1,y1) e (x2,y2)
             self.m = (y2 - y1) / (x2 - x1) if x2 != x1 else 0
             self.q = y1 - self.m * x1
-            
+
+            self.y_data_clean = self.m * self.x_data + self.q
             self.y_data = self.m * self.x_data + self.q + self.noises
             self.y_data = np.clip(self.y_data, self.config["y_range"][0], self.config["y_range"][1])
             print(f"Generated linear function: y = {self.m:.3f}x + {self.q:.3f}")
@@ -100,6 +102,7 @@ class DataGenerator:
             self.a, self.b, self.c = coeffs
             
             # Genera i dati
+            self.y_data_clean = self.a * self.x_data**2 + self.b * self.x_data + self.c
             self.y_data = self.a * self.x_data**2 + self.b * self.x_data + self.c + self.noises
             self.y_data = np.clip(self.y_data, y_min, y_max)
             print(f"Generated quadratic function: y = {self.a:.3f}x² + {self.b:.3f}x + {self.c:.3f}")
@@ -116,22 +119,28 @@ class DataGenerator:
 
     def add_selected_point(self, x_coord, y_coord, noise=0.0):
         """
-        Aggiunge un punto specifico al dataset
+        Aggiunge un punto specifico al dataset e ricalcola la funzione
         """
         # Verifica che le coordinate siano nel range valido
         x_coord = np.clip(x_coord, self.config["x_range"][0], self.config["x_range"][1])
         y_coord = np.clip(y_coord, self.config["y_range"][0], self.config["y_range"][1])
         
         # Inizializza gli array se non esistono
-        if not hasattr(self, 'x_data') or self.x_data is None:
+        if not hasattr(self, 'x_data') or self.x_data is None or len(self.x_data) == 0:
             self.x_data = np.array([x_coord])
             self.y_data = np.array([y_coord])
-            self.noises = np.array([noise])
+            self.y_data_clean = np.array([y_coord])
+            self.noises = np.array([0.0])
         else:
             # Aggiungi il punto agli array esistenti
             self.x_data = np.append(self.x_data, x_coord)
             self.y_data = np.append(self.y_data, y_coord)
-            self.noises = np.append(self.noises, noise)
+            # Aggiungi valori temporanei che verranno ricalcolati
+            self.y_data_clean = np.append(self.y_data_clean, y_coord)
+            self.noises = np.append(self.noises, 0.0)
+        
+        # Ricalcola i parametri della funzione con tutti i punti
+        self.update_function_parameters()
         
         print(f"Punto aggiunto: ({x_coord:.3f}, {y_coord:.3f})")
         return True
@@ -155,10 +164,16 @@ class DataGenerator:
             # Rimuovi il punto
             removed_x = self.x_data[closest_index]
             removed_y = self.y_data[closest_index]
+            removed_y_clean = self.y_data_clean[closest_index]
             
             self.x_data = np.delete(self.x_data, closest_index)
             self.y_data = np.delete(self.y_data, closest_index)
+            self.y_data_clean = np.delete(self.y_data_clean, closest_index)
+
             self.noises = np.delete(self.noises, closest_index)
+            # Ricalcola i parametri della funzione dopo la rimozione
+            if len(self.x_data) > 0:
+                self.update_function_parameters()
             
             print(f"Punto rimosso: ({removed_x:.3f}, {removed_y:.3f})")
             return True
@@ -178,18 +193,21 @@ class DataGenerator:
         
         removed_x = self.x_data[0]
         removed_y = self.y_data[0]
+        removed_x_clean = self.y_data_clean[0]
         removed_noise = self.noises[0] 
 
         if len(self.x_data) == 1:
             # Se c'è solo un punto, rimuovi tutto
             self.x_data = np.array([])
             self.y_data = np.array([])
+            self.y_data_clean = np.array([])
             self.noises = np.array([])
             print(f"Ultimo punto rimosso: ({removed_x:.3f}, {removed_y:.3f}, noise: {removed_noise:.3f})")
         else:
             # Rimuovi sempre il primo punto (indice 0)
-            self.x_data = self.x_data[1:]  # Rimuovi il primo elemento
-            self.y_data = self.y_data[1:]  # Rimuovi il primo elemento
+            self.x_data = self.x_data[1:] 
+            self.y_data = self.y_data[1:]  
+            self.y_data_clean = self.y_data_clean[1:]
             self.noises = self.noises[1:]  # Rimuovi il primo elemento
             print(f"Primo punto rimosso: ({removed_x:.3f}, {removed_y:.3f}, noise: {removed_noise:.3f})")
         
@@ -209,6 +227,7 @@ class DataGenerator:
         if self.config["polynomial_degree"] == 0:
             if self.k is None:
                 self.k = np.random.uniform(self.config["y_range"][0], self.config["y_range"][1], 1)
+            new_y_clean = self.k
             new_y = self.k + noise
         elif self.config["polynomial_degree"] == 1:
             if self.q is None or self.m is None:
@@ -218,6 +237,7 @@ class DataGenerator:
                 y2 = np.random.uniform(self.config["y_range"][0], self.config["y_range"][1])
                 self.m = (y2 - y1) / (x2 - x1) if x2 != x1 else 0
                 self.q = y1 - self.m * x1
+            new_y_clean = self.m * new_x + self.q  
             new_y = self.m * new_x + self.q + noise
         elif self.config["polynomial_degree"] == 2:
             if not hasattr(self, 'a') or not hasattr(self, 'b') or not hasattr(self, 'c'):
@@ -229,6 +249,7 @@ class DataGenerator:
                 A = np.vstack([x_points**2, x_points, np.ones(3)]).T
                 coeffs = np.linalg.solve(A, y_points)
                 self.a, self.b, self.c = coeffs
+            new_y_clean = self.a * new_x**2 + self.b * new_x + self.c 
             new_y = self.a * new_x**2 + self.b * new_x + self.c + noise
         else:
             raise ValueError(f"{self.config['polynomial_degree']} degree not implemented yet")
@@ -240,10 +261,12 @@ class DataGenerator:
         if not hasattr(self, 'x_data') or self.x_data is None or len(self.x_data) == 0:
             self.x_data = np.array([new_x])
             self.y_data = np.array([new_y])
+            self.y_data_clean = np.array([new_y_clean])
             self.noises = np.array([noise])
         else:
             self.x_data = np.append(self.x_data, new_x)
             self.y_data = np.append(self.y_data, new_y)
+            self.y_data_clean = np.append(self.y_data_clean, new_y_clean)
             self.noises = np.append(self.noises, noise)
         
         print(f"Nuovo punto aggiunto: ({float(new_x):.3f}, {float(new_y):.3f})")
@@ -316,6 +339,58 @@ class DataGenerator:
         else:
             print("Livello di rumore minimo raggiunto (0.0)")
             return False
+        
+    def update_function_parameters(self):
+        """
+        Ricalcola i parametri della funzione basandosi su tutti i punti presenti nel dataset
+        """
+        if not hasattr(self, 'x_data') or self.x_data is None or len(self.x_data) == 0:
+            return
+        
+        if self.config["polynomial_degree"] == 0:
+            # Per una costante, usa la media dei valori y
+            self.k = np.mean(self.y_data)
+            self.y_data_clean = np.ones(len(self.x_data)) * self.k
+            
+        elif self.config["polynomial_degree"] == 1:
+            # Regressione lineare con minimi quadrati
+            if len(self.x_data) >= 2:
+                # Calcola m e q con il metodo dei minimi quadrati
+                A = np.vstack([self.x_data, np.ones(len(self.x_data))]).T
+                self.m, self.q = np.linalg.lstsq(A, self.y_data, rcond=None)[0]
+                self.y_data_clean = self.m * self.x_data + self.q
+            elif len(self.x_data) == 1:
+                # Con un solo punto, mantieni i parametri esistenti o crea una retta orizzontale
+                if self.m is None or self.q is None:
+                    self.m = 0
+                    self.q = self.y_data[0]
+                self.y_data_clean = self.m * self.x_data + self.q
+                
+        elif self.config["polynomial_degree"] == 2:
+            # Regressione quadratica con minimi quadrati
+            if len(self.x_data) >= 3:
+                A = np.vstack([self.x_data**2, self.x_data, np.ones(len(self.x_data))]).T
+                coeffs = np.linalg.lstsq(A, self.y_data, rcond=None)[0]
+                self.a, self.b, self.c = coeffs
+                self.y_data_clean = self.a * self.x_data**2 + self.b * self.x_data + self.c
+            elif len(self.x_data) < 3:
+                # Con meno di 3 punti non possiamo determinare univocamente una parabola
+                if not hasattr(self, 'a'):
+                    self.a = 0
+                    self.b = 0
+                    self.c = np.mean(self.y_data) if len(self.y_data) > 0 else 0
+                self.y_data_clean = self.a * self.x_data**2 + self.b * self.x_data + self.c
+        
+        # Ricalcola i rumori come differenza tra dati e funzione pulita
+        self.noises = self.y_data - self.y_data_clean
+        
+        print(f"Parametri aggiornati:")
+        if self.config["polynomial_degree"] == 0:
+            print(f"  y = {self.k:.3f}")
+        elif self.config["polynomial_degree"] == 1:
+            print(f"  y = {self.m:.3f}x + {self.q:.3f}")
+        elif self.config["polynomial_degree"] == 2:
+            print(f"  y = {self.a:.3f}x² + {self.b:.3f}x + {self.c:.3f}")
 
 
             
@@ -399,8 +474,8 @@ class DataGenerator:
 if __name__ == "__main__":
 
     data_gen = DataGenerator(config = {
-        "polynomial_degree": 0,
-        "data_size": 200,
+        "polynomial_degree": 1,
+        "data_size": 3,
         "noise_level": 0.1,
         "seed": 42,
         "x_range": (0,1),

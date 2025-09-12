@@ -24,6 +24,8 @@ class Interactive2DPlotter:
 
             self.plot_config = plot_config
             self.data_config = data_config
+            # Salva una copia dei valori originali per il reset
+            self.original_data_config = data_config.copy()
 
             # Inizializza il DataGenerator
             self.data_generator = DataGenerator(config=self.data_config)
@@ -40,7 +42,7 @@ class Interactive2DPlotter:
             self.cid = self.ax.figure.canvas.mpl_connect('button_press_event', self.on_click)
 
             # Genera i dati iniziali e plottali
-            self.generate_data(None)
+            # self.generate_data(None)
 
             plt.show()
 
@@ -80,56 +82,73 @@ class Interactive2DPlotter:
         def set_control_panel(self):
             self.control_panel_x = 0.81
             self.control_panel_width = 0.16
-            self.button_width = 0.025  # Ridotto da 0.035
-            self.counter_width = 0.04  # Ridotto da 0.05
-            self.spacing = 0.005       # Ridotto da 0.01
-            total_width = self.button_width * 2 + self.counter_width + self.spacing * 2
+            self.button_width = 0.025
+            self.counter_width = 0.04
+            self.spacing = 0.005
+            # Calcolo modificato per la larghezza totale considerando la display area più larga per le funzioni
+            total_width = self.button_width * 2 + (self.counter_width + 0.02) + self.spacing * 2
             self.start_x = self.control_panel_x + (self.control_panel_width - total_width) / 2
             self.button_gen_width = self.control_panel_width 
-            self.contro_panel_ys = [0.60, 0.50, 0.40, 0.33, 0.10, 0.03, -0.13, -0.19, 0.8, 0.85, 0.75]  
+            # Modificato: spostati fit_gp e pred_gp più in alto e aggiunto spazio per reset
+            self.contro_panel_ys = [0.62, 0.71, 0.53, 0.46, 0.11, 0.05, 0.40, 0.84, 0.88, 0.80]  
             self.add_datagenerator_controls()
 
+
         def add_datagenerator_controls(self):
+            self.add_point_selection_controls()
+
+
+
+
             self.add_datapoints_controls()
+
+
+
+
+
             self.add_poly_degree_controls()
             self.add_noise_levels_controls()
             self.add_generation_button()
             self.add_fit_gp_button()
             self.add_pred_gp_button()
+            self.add_reset_button()  # Aggiungi questa linea
+
+        def add_point_selection_controls(self):
             self.add_remove_point_button()
             self.selected_point_display()
             self.add_add_point_button()
+
 
         
 
 
         def add_datapoints_controls(self):
             # Label "Datapoints"
-            ax_label = plt.axes([self.control_panel_x, self.contro_panel_ys[0] + 0.05, self.control_panel_width, 0.03], facecolor='none')
+            ax_label = plt.axes([self.control_panel_x +0.01, self.contro_panel_ys[0] + 0.05, self.control_panel_width, 0.03], facecolor='none')
             ax_label.text(0.5, 0.5, 'Datapoints', transform=ax_label.transAxes,
-                        ha='center', va='center', fontsize=13, weight='bold')
+                        ha='center', va='center', fontsize=11, weight='bold')
             ax_label.axis('off')
             
             
             # Bottone decrease (-)
-            self.ax_minus_data = plt.axes([self.start_x, self.contro_panel_ys[0], self.button_width, 0.04])
+            self.ax_minus_data = plt.axes([self.start_x +0.01, self.contro_panel_ys[0], self.button_width, 0.04])
             self.button_minus_data = Button(self.ax_minus_data, '◄', 
                                         color='#ffcccc', hovercolor='#ff9999')
             self.button_minus_data.label.set_fontsize(12)
             self.button_minus_data.on_clicked(self.decrease_datapoints)
             
             # Counter
-            self.ax_counter = plt.axes([self.start_x + self.button_width + self.spacing, self.contro_panel_ys[0], 
+            self.ax_counter = plt.axes([self.start_x + 0.02 + self.button_width + self.spacing, self.contro_panel_ys[0], 
                                         self.counter_width, 0.04], facecolor='white')
             self.ax_counter.axis('off')
-            self.counter_text = self.ax_counter.text(0.5, 0.5, 
+            self.counter_text = self.ax_counter.text(0.5 , 0.5, 
                                                     str(self.data_config["data_size"]),
                                                     transform=self.ax_counter.transAxes,
                                                     ha='center', va='center', 
-                                                    fontsize=14, weight='bold')
+                                                    fontsize=11, weight='bold')
             
             # Bottone increase (+)
-            self.ax_plus_data = plt.axes([self.start_x + self.button_width + self.counter_width + self.spacing * 2, 
+            self.ax_plus_data = plt.axes([self.start_x +0.03 + self.button_width + self.counter_width + self.spacing * 2, 
                                         self.contro_panel_ys[0], self.button_width, 0.04])
             self.button_plus_data = Button(self.ax_plus_data, '►', 
                                         color='#ccffcc', hovercolor='#99ff99')
@@ -137,31 +156,35 @@ class Interactive2DPlotter:
             self.button_plus_data.on_clicked(self.increase_datapoints)
 
         def add_poly_degree_controls(self):
-            # Label "Poly degree"
-            ax_label2 = plt.axes([self.control_panel_x, self.contro_panel_ys[1] + 0.05, self.control_panel_width, 0.03], facecolor='none')
-            ax_label2.text(0.5, 0.5, 'Poly degree', transform=ax_label2.transAxes,
-                        ha='center', va='center', fontsize=13, weight='bold')
+            # Label "Function family" invece di "Poly degree"
+            ax_label2 = plt.axes([self.control_panel_x +0.01, self.contro_panel_ys[1] + 0.05, self.control_panel_width, 0.03], facecolor='none')
+            ax_label2.text(0.5, 0.5, 'Function family', transform=ax_label2.transAxes,
+                        ha='center', va='center', fontsize=11, weight='bold')
             ax_label2.axis('off')
             
+            # Lista delle famiglie di funzioni
+            self.function_families = ['Poly 0°', 'Poly 1°', 'Poly 2°', 'Step', 'Periodic']
+            self.current_family_index = self.data_config["polynomial_degree"]  # Inizia con l'indice corrispondente al grado
+            
             # Bottone decrease (-)
-            self.ax_minus_poly = plt.axes([self.start_x, self.contro_panel_ys[1], self.button_width, 0.04])
+            self.ax_minus_poly = plt.axes([self.start_x +0.01, self.contro_panel_ys[1], self.button_width, 0.04])
             self.button_minus_poly = Button(self.ax_minus_poly, '◄', 
                                         color='#ffcccc', hovercolor='#ff9999')
             self.button_minus_poly.label.set_fontsize(12)
             self.button_minus_poly.on_clicked(self.decrease_poly_degree)
             
-            # Counter
-            self.ax_poly_counter = plt.axes([self.start_x + self.button_width + self.spacing, self.contro_panel_ys[1], 
-                                            self.counter_width, 0.04], facecolor='white')
+            # Display area più larga per il nome della funzione
+            self.ax_poly_counter = plt.axes([self.start_x +0.01 + self.button_width + self.spacing, self.contro_panel_ys[1], 
+                                            self.counter_width + 0.02, 0.04], facecolor='white')  # Aumentato la larghezza
             self.ax_poly_counter.axis('off')
             self.poly_counter_text = self.ax_poly_counter.text(0.5, 0.5, 
-                                                            str(self.data_config["polynomial_degree"]),
+                                                            self.function_families[self.current_family_index],
                                                             transform=self.ax_poly_counter.transAxes,
                                                             ha='center', va='center', 
-                                                            fontsize=14, weight='bold')
+                                                            fontsize=11, weight='bold')  # Font leggermente più piccolo
             
-            # Bottone increase (+)
-            self.ax_plus_poly = plt.axes([self.start_x + self.button_width + self.counter_width + self.spacing * 2, 
+            # Bottone increase (+) - spostato un po' più a destra per compensare la display area più larga
+            self.ax_plus_poly = plt.axes([self.start_x +0.01 + self.button_width + (self.counter_width + 0.02) + self.spacing * 2, 
                                         self.contro_panel_ys[1], self.button_width, 0.04])
             self.button_plus_poly = Button(self.ax_plus_poly, '►', 
                                         color='#ccffcc', hovercolor='#99ff99')
@@ -171,19 +194,19 @@ class Interactive2DPlotter:
         def add_noise_levels_controls(self):
 
             # Label "Noise level"
-            ax_label3 = plt.axes([self.control_panel_x, self.contro_panel_ys[2] + 0.05, self.control_panel_width, 0.03], facecolor='none')
+            ax_label3 = plt.axes([self.control_panel_x +0.01, self.contro_panel_ys[2] + 0.05, self.control_panel_width, 0.03], facecolor='none')
             ax_label3.text(0.5, 0.5, 'Noise level', transform=ax_label3.transAxes,
-                        ha='center', va='center', fontsize=13, weight='bold')
+                        ha='center', va='center', fontsize=11, weight='bold')
             ax_label3.axis('off')
             
             # Bottone decrease (-)
-            self.ax_minus_noise = plt.axes([self.start_x, self.contro_panel_ys[2], self.button_width, 0.04])
+            self.ax_minus_noise = plt.axes([self.start_x +0.01, self.contro_panel_ys[2], self.button_width, 0.04])
             self.button_minus_noise = Button(self.ax_minus_noise, '◄', color='#ffcccc', hovercolor='#ff9999')
             self.button_minus_noise.label.set_fontsize(12)
             self.button_minus_noise.on_clicked(self.decrease_noise)
             
-            # Counter (mostra come percentuale)
-            self.ax_noise_counter = plt.axes([self.start_x + self.button_width + self.spacing, self.contro_panel_ys[2], 
+            # Counter (sigma white noise)
+            self.ax_noise_counter = plt.axes([self.start_x + 0.02 + self.button_width + self.spacing, self.contro_panel_ys[2], 
                                             self.counter_width, 0.04], facecolor='white')
             self.ax_noise_counter.axis('off')
             noise_display = self.data_config["noise_level"]
@@ -191,10 +214,10 @@ class Interactive2DPlotter:
                                                                 str(noise_display),
                                                                 transform=self.ax_noise_counter.transAxes,
                                                                 ha='center', va='center', 
-                                                                fontsize=14, weight='bold')
+                                                                fontsize=11, weight='bold')
             
             # Bottone increase (+)
-            self.ax_plus_noise = plt.axes([self.start_x + self.button_width + self.counter_width + self.spacing * 2, 
+            self.ax_plus_noise = plt.axes([self.start_x +0.03 + self.button_width + self.counter_width + self.spacing * 2, 
                                         self.contro_panel_ys[2], self.button_width, 0.04])
             self.button_plus_noise = Button(self.ax_plus_noise, '►', 
                                         color='#ccffcc', hovercolor='#99ff99')
@@ -206,7 +229,7 @@ class Interactive2DPlotter:
             self.ax_generate = plt.axes([self.control_panel_x + 0.01, self.contro_panel_ys[3], self.button_gen_width, 0.05])
             self.button_generate = Button(self.ax_generate, 'Generate', 
                                         color='#cce6ff', hovercolor="#2993f7")
-            self.button_generate.label.set_fontsize(14)
+            self.button_generate.label.set_fontsize(12)
             self.button_generate.label.set_weight('bold')
             self.button_generate.on_clicked(self.generate_data)
 
@@ -214,7 +237,7 @@ class Interactive2DPlotter:
             self.ax_fit_gp = plt.axes([self.control_panel_x + 0.01, self.contro_panel_ys[4], self.button_gen_width, 0.05])
             self.button_fit_gp = Button(self.ax_fit_gp, 'Fit GP', 
                                         color='#eeff99', hovercolor="#fca7a3")
-            self.button_fit_gp.label.set_fontsize(14)
+            self.button_fit_gp.label.set_fontsize(12)
             self.button_fit_gp.label.set_weight('bold')
             # self.button_fit_gp.on_clicked(self.generate_data)
 
@@ -222,13 +245,21 @@ class Interactive2DPlotter:
             self.ax_pred_gp = plt.axes([self.control_panel_x + 0.01, self.contro_panel_ys[5], self.button_gen_width, 0.05])
             self.button_pred_gp = Button(self.ax_pred_gp, 'Pred GP', 
                                         color='#eeff99', hovercolor='#fca7a3')
-            self.button_pred_gp.label.set_fontsize(14)
+            self.button_pred_gp.label.set_fontsize(12)
             self.button_pred_gp.label.set_weight('bold')
             # self.button_pred.on_clicked(self.generate_data)
 
+        def add_reset_button(self):
+            self.ax_reset = plt.axes([self.control_panel_x + 0.01, self.contro_panel_ys[6], self.button_gen_width, 0.05])
+            self.button_reset = Button(self.ax_reset, 'Reset', 
+                                    color="#fc8a8a", hovercolor='#ff3333')
+            self.button_reset.label.set_fontsize(12)
+            self.button_reset.label.set_weight('bold')
+            self.button_reset.on_clicked(self.reset_all)
+
         def selected_point_display(self):
             # Text box per mostrare il punto selezionato
-            self.ax_selected = plt.axes([self.control_panel_x, self.contro_panel_ys[8], self.control_panel_width, 0.04], 
+            self.ax_selected = plt.axes([self.control_panel_x + 0.01, self.contro_panel_ys[7], self.control_panel_width, 0.04], 
                                 facecolor='white')
             self.ax_selected.axis('off')
             self.selected_text = self.ax_selected.text(0.5, 0.5, 'No point selected',
@@ -263,10 +294,10 @@ class Interactive2DPlotter:
                 self.selected_text.set_weight('bold')
             
             elif event.inaxes not in [self.ax_minus_data, self.ax_plus_data, self.ax_minus_poly, 
-                         self.ax_plus_poly, self.ax_minus_noise, self.ax_plus_noise,
-                         self.ax_generate, self.ax_fit_gp, self.ax_pred_gp,
-                         self.ax_counter, self.ax_poly_counter, self.ax_noise_counter,
-                         self.ax_selected, self.ax_remove_point, self.ax_add_point]:
+                                self.ax_plus_poly, self.ax_minus_noise, self.ax_plus_noise,
+                                self.ax_generate, self.ax_fit_gp, self.ax_pred_gp, self.ax_reset,
+                                self.ax_counter, self.ax_poly_counter, self.ax_noise_counter,
+                                self.ax_selected, self.ax_remove_point, self.ax_add_point]:
                 # Deseleziona il punto
                 self.selected_point = None
                 
@@ -293,9 +324,24 @@ class Interactive2DPlotter:
             self.ax.grid(True, alpha=0.3, linestyle='--')
             
             # Plotta i nuovi punti se esistono
-            if hasattr(self.data_generator, 'x_data') and self.data_generator.x_data is not None:
+            if hasattr(self.data_generator, 'x_data') and self.data_generator.x_data is not None and len(self.data_generator.x_data) > 0:
                 self.ax.scatter(self.data_generator.x_data, self.data_generator.y_data, 
-                            color='blue', s=50, alpha=0.6, edgecolors='darkblue', linewidth=1)
+                            color='blue', s=50, alpha=0.4, edgecolors='darkblue', linewidth=1)
+            
+            # Plotta la funzione continua sottostante (se i parametri esistono)
+            x_line = np.linspace(self.plot_config["x_range"][0], self.plot_config["x_range"][1], 200)
+            
+            if self.data_generator.config["polynomial_degree"] == 0 and self.data_generator.k is not None:
+                y_line = np.ones(len(x_line)) * self.data_generator.k
+                self.ax.plot(x_line, y_line, color="orange", linestyle='dashed', linewidth=2)
+                
+            elif self.data_generator.config["polynomial_degree"] == 1 and self.data_generator.m is not None and self.data_generator.q is not None:
+                y_line = self.data_generator.m * x_line + self.data_generator.q
+                self.ax.plot(x_line, y_line, color="orange", linestyle='dashed', linewidth=2)
+                
+            elif self.data_generator.config["polynomial_degree"] == 2 and hasattr(self.data_generator, 'a') and hasattr(self.data_generator, 'b') and hasattr(self.data_generator, 'c'):
+                y_line = self.data_generator.a * x_line**2 + self.data_generator.b * x_line + self.data_generator.c
+                self.ax.plot(x_line, y_line, color="orange", linestyle='dashed', linewidth=2)
             
             # Ridisegna il marker del punto selezionato se esiste
             if self.selected_point is not None:
@@ -307,7 +353,7 @@ class Interactive2DPlotter:
             plt.draw()
 
         def add_remove_point_button(self):
-            self.ax_remove_point = plt.axes([self.control_panel_x + 0.01, self.contro_panel_ys[9], self.button_gen_width, 0.04])
+            self.ax_remove_point = plt.axes([self.control_panel_x + 0.01, self.contro_panel_ys[8], self.button_gen_width, 0.04])
             self.button_remove_point = Button(self.ax_remove_point, 'Remove Selected Point', 
                                             color='#ffcccc', hovercolor='#ff9999')
             self.button_remove_point.label.set_fontsize(11)
@@ -315,7 +361,7 @@ class Interactive2DPlotter:
             self.button_remove_point.on_clicked(self.remove_selected_point)
 
         def add_add_point_button(self):
-            self.ax_add_point = plt.axes([self.control_panel_x + 0.01, self.contro_panel_ys[10], self.button_gen_width, 0.04])
+            self.ax_add_point = plt.axes([self.control_panel_x + 0.01, self.contro_panel_ys[9], self.button_gen_width, 0.04])
             self.button_add_point = Button(self.ax_add_point, 'Add Selected Point', 
                                         color='#ccffcc', hovercolor='#99ff99')
             self.button_add_point.label.set_fontsize(11)
@@ -417,38 +463,54 @@ class Interactive2DPlotter:
 
         def increase_poly_degree(self, event):
             """
-            Aumenta il grado del polinomio e aggiorna l'interfaccia
+            Cambia alla prossima famiglia di funzioni
             """
-            success = self.data_generator.increase_poly_degree()
-            
-            if success:
-                # Aggiorna il counter nel data_config
-                self.data_config["polynomial_degree"] = self.data_generator.config["polynomial_degree"]
-                self.poly_counter_text.set_text(str(self.data_config["polynomial_degree"]))
+            if self.current_family_index < len(self.function_families) - 1:
+                self.current_family_index += 1
+                self.poly_counter_text.set_text(self.function_families[self.current_family_index])
                 
-                # Rigenera i dati con il nuovo grado
-                self.data_generator.generate_datapoints()
-                self.plot_data()
+                # Se siamo ancora nei polinomi (indici 0, 1, 2), aggiorna il grado
+                if self.current_family_index <= 2:
+                    self.data_generator.config["polynomial_degree"] = self.current_family_index
+                    self.data_config["polynomial_degree"] = self.current_family_index
+                    
+                    # Rigenera i dati con il nuovo grado
+                    self.data_generator.generate_datapoints()
+                    self.plot_data()
+                else:
+                    # Per step e periodic, per ora non fare nulla
+                    print(f"Funzione {self.function_families[self.current_family_index]} non ancora implementata")
+                
+                plt.draw()
 
         def decrease_poly_degree(self, event):
             """
-            Diminuisce il grado del polinomio e aggiorna l'interfaccia
+            Cambia alla precedente famiglia di funzioni
             """
-            success = self.data_generator.decrease_poly_degree()
-            
-            if success:
-                # Aggiorna il counter nel data_config
-                self.data_config["polynomial_degree"] = self.data_generator.config["polynomial_degree"]
-                self.poly_counter_text.set_text(str(self.data_config["polynomial_degree"]))
+            if self.current_family_index > 0:
+                self.current_family_index -= 1
+                self.poly_counter_text.set_text(self.function_families[self.current_family_index])
                 
-                # Rigenera i dati con il nuovo grado
-                self.data_generator.generate_datapoints()
-                self.plot_data()
+                # Se siamo ancora nei polinomi (indici 0, 1, 2), aggiorna il grado
+                if self.current_family_index <= 2:
+                    self.data_generator.config["polynomial_degree"] = self.current_family_index
+                    self.data_config["polynomial_degree"] = self.current_family_index
+                    
+                    # Rigenera i dati con il nuovo grado
+                    self.data_generator.generate_datapoints()
+                    self.plot_data()
+                else:
+                    # Per step e periodic, per ora non fare nulla
+                    print(f"Funzione {self.function_families[self.current_family_index]} non ancora implementata")
+                
+                plt.draw()
+
 
         def increase_noise(self, event):
             """
-            Aumenta il livello di rumore e aggiorna l'interfaccia
+            Aumenta il livello di rumore e aggiorna solo il rumore nei dati esistenti
             """
+            old_noise_level = self.data_generator.config["noise_level"]
             success = self.data_generator.increase_noise_level()
             
             if success:
@@ -456,14 +518,25 @@ class Interactive2DPlotter:
                 self.data_config["noise_level"] = self.data_generator.config["noise_level"]
                 self.noise_counter_text.set_text(f"{self.data_config['noise_level']:.3f}")
                 
-                # Rigenera i dati con il nuovo livello di rumore
-                self.data_generator.generate_datapoints()
+                # Se ci sono dati, aggiorna solo il rumore
+                if hasattr(self.data_generator, 'x_data') and len(self.data_generator.x_data) > 0:
+                    # Rigenera il rumore con il nuovo livello
+                    new_noises = np.random.normal(0.0, self.data_generator.config["noise_level"], len(self.data_generator.x_data))
+                    self.data_generator.noises = new_noises
+                    
+                    # Ricalcola y_data con il nuovo rumore
+                    self.data_generator.y_data = self.data_generator.y_data_clean + self.data_generator.noises
+                    self.data_generator.y_data = np.clip(self.data_generator.y_data, 
+                                                        self.data_generator.config["y_range"][0], 
+                                                        self.data_generator.config["y_range"][1])
+                
                 self.plot_data()
 
         def decrease_noise(self, event):
             """
-            Diminuisce il livello di rumore e aggiorna l'interfaccia
+            Diminuisce il livello di rumore e aggiorna solo il rumore nei dati esistenti
             """
+            old_noise_level = self.data_generator.config["noise_level"]
             success = self.data_generator.decrease_noise_level()
             
             if success:
@@ -471,9 +544,54 @@ class Interactive2DPlotter:
                 self.data_config["noise_level"] = self.data_generator.config["noise_level"]
                 self.noise_counter_text.set_text(f"{self.data_config['noise_level']:.3f}")
                 
-                # Rigenera i dati con il nuovo livello di rumore
-                self.data_generator.generate_datapoints()
+                # Se ci sono dati, aggiorna solo il rumore
+                if hasattr(self.data_generator, 'x_data') and len(self.data_generator.x_data) > 0:
+                    # Rigenera il rumore con il nuovo livello
+                    new_noises = np.random.normal(0.0, self.data_generator.config["noise_level"], len(self.data_generator.x_data))
+                    self.data_generator.noises = new_noises
+                    
+                    # Ricalcola y_data con il nuovo rumore
+                    self.data_generator.y_data = self.data_generator.y_data_clean + self.data_generator.noises
+                    self.data_generator.y_data = np.clip(self.data_generator.y_data, 
+                                                        self.data_generator.config["y_range"][0], 
+                                                        self.data_generator.config["y_range"][1])
+                
                 self.plot_data()
+
+        def reset_all(self, event):
+            """
+            Resetta completamente il DataGenerator e il grafico ai valori originali
+            """
+            # Ripristina i valori originali di data_config
+            self.data_config = self.original_data_config.copy()
+            
+            # Resetta il DataGenerator con la configurazione originale
+            self.data_generator = DataGenerator(config=self.data_config)
+            
+            # Resetta i contatori nell'interfaccia con i valori originali
+            self.counter_text.set_text(str(self.original_data_config["data_size"]))
+            self.noise_counter_text.set_text(f"{self.original_data_config['noise_level']:.3f}")
+            self.current_family_index = self.original_data_config["polynomial_degree"]
+            self.poly_counter_text.set_text(self.function_families[self.current_family_index])
+            
+            # Deseleziona qualsiasi punto selezionato
+            self.selected_point = None
+            if self.point_marker is not None:
+                self.point_marker.remove()
+                self.point_marker = None
+            
+            # Ripristina il testo di default per il punto selezionato
+            self.selected_text.set_text('No point selected')
+            self.selected_text.set_style('italic')
+            self.selected_text.set_weight('normal')
+            
+            # Pulisci e ridisegna il plot
+            self.plot_data()
+            
+            print(f"Reset completato - Ripristinati valori originali:")
+            print(f"  Data size: {self.original_data_config['data_size']}")
+            print(f"  Polynomial degree: {self.original_data_config['polynomial_degree']}")
+            print(f"  Noise level: {self.original_data_config['noise_level']:.3f}")
 
             
 
@@ -500,8 +618,8 @@ if __name__ == "__main__":
         }
     
     data_config = {
-        "polynomial_degree": 2,
-        "data_size": 300,
+        "polynomial_degree": 1,
+        "data_size": 100,
         "noise_level": 0.01,
         "seed": 42,
         "x_range": (plot_config["x_range"][0], plot_config["x_range"][1]),
